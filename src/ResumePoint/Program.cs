@@ -51,8 +51,7 @@ internal static class Program
 
         try
         {
-            var settings = Settings.Load();
-            Settings.MigrateLegacyData(settings);   // 从改名前的数据目录迁移断点库
+            var settings = Settings.Load();   // Load 内部会完成旧数据目录迁移
             settings.Save();
             Directory.CreateDirectory(settings.DataDirectory);
 

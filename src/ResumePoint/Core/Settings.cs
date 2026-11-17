@@ -83,15 +83,34 @@ public sealed class Settings
             if (s is not null) s.LoadedFromLegacy = true;
         }
 
-        if (s is not null)
+        if (s is null)
         {
-            s.Normalize();
-            return s;
+            var d = new Settings();
+            d.Normalize();
+            return d;
         }
 
-        var d = new Settings();
-        d.Normalize();
-        return d;
+        s.Normalize();
+
+        // 旧设置里如果写的是"改名前的默认数据目录"，一并改成新默认目录，
+        // 否则会和新目录判定为同一个而跳过迁移，数据就永远留在旧文件夹里。
+        if (s.LoadedFromLegacy &&
+            string.Equals(s.DataDirectory.TrimEnd('\\'), LegacyDataDirectory.TrimEnd('\\'),
+                          StringComparison.OrdinalIgnoreCase))
+        {
+            s.DataDirectory = DefaultDataDirectory();
+        }
+
+        MigrateLegacyData(s);   // 放在 Load 里，任何调用路径（托盘/--open/--list/--diag）都会触发迁移
+
+        if (s.LoadedFromLegacy)
+        {
+            // 已经把旧设置"接手"了 —— 立刻写一份到新位置，
+            // 否则每次运行都会重复走旧路径的判定
+            try { s.Save(); } catch { }
+        }
+
+        return s;
     }
 
     private static Settings? TryRead(string path)
@@ -108,6 +127,8 @@ public sealed class Settings
         }
     }
 
+    private static int _migrated;
+
     /// <summary>
     /// 把改名前的数据目录（断点库）迁移到新位置。已有同名文件不覆盖。
     /// </summary>
@@ -115,6 +136,8 @@ public sealed class Settings
     {
         try
         {
+            if (Interlocked.Exchange(ref _migrated, 1) == 1) return;   // 只做一次
+
             var oldDir = LegacyDataDirectory;
             var newDir = settings.DataDirectory;
 
