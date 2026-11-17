@@ -32,19 +32,45 @@ public sealed class Smtc
 
     public event Action? SessionsChanged;
 
+    /// <summary>
+    /// 在**有消息泵的线程**（UI 线程）上预热 manager。
+    ///
+    /// 这一点很关键：GlobalSystemMediaTransportControlsSessionManager 的会话列表是靠
+    /// SessionsChanged 事件异步填充的。如果 manager 是在"会话还不存在"的时刻创建的，
+    /// 而它所在的线程又没有消息循环来派发事件，GetSessions() 会永远返回空 ——
+    /// 实测踩过这个坑：冷启动播放器后，manager 早于会话创建，之后 30 秒都看不到会话。
+    ///
+    /// 所以：manager 一律在 UI 线程（跑着 Application.Run 的那个）上创建。
+    /// </summary>
+    public async Task WarmUpAsync()
+    {
+        try { await GetManagerAsync().ConfigureAwait(false); }
+        catch { }
+    }
+
+    /// <summary>丢弃缓存的 manager，下次查询会重新向系统请求一个。</summary>
+    public void InvalidateManager()
+    {
+        Interlocked.Exchange(ref _manager, null);
+    }
+
     private async Task<GlobalSystemMediaTransportControlsSessionManager> GetManagerAsync()
     {
-        if (_manager is not null) return _manager;
+        var cached = Volatile.Read(ref _manager);
+        if (cached is not null) return cached;
 
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_manager is null)
+            cached = Volatile.Read(ref _manager);
+            if (cached is null)
             {
-                _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-                _manager.SessionsChanged += (_, _) => SessionsChanged?.Invoke();
+                var mgr = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+                mgr.SessionsChanged += (_, _) => SessionsChanged?.Invoke();
+                Volatile.Write(ref _manager, mgr);
+                cached = mgr;
             }
-            return _manager;
+            return cached;
         }
         finally
         {

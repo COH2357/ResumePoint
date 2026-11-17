@@ -12,6 +12,29 @@ internal static class Program
         if (args.Any(a => a.Equals("--diag", StringComparison.OrdinalIgnoreCase)))
             return RunDiag(args);
 
+        if (args.Any(a => a.Equals("--list", StringComparison.OrdinalIgnoreCase)))
+            return RunList();
+
+        var openIndex = Array.FindIndex(args, a =>
+            a.Equals("--open", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--open-start", StringComparison.OrdinalIgnoreCase));
+
+        if (openIndex >= 0)
+        {
+            // 命令行入口：打开并续播（给脚本 / 右键菜单 / 自动化用）
+            if (openIndex + 1 >= args.Length)
+            {
+                Console.Error.WriteLine("用法: MediaResume.exe --open <文件路径> | --open-start <文件路径>");
+                return 2;
+            }
+            var target = args[openIndex + 1];
+            var mode = args[openIndex].Equals("--open-start", StringComparison.OrdinalIgnoreCase)
+                ? OpenMode.FromStart : OpenMode.Resume;
+
+            ApplicationConfiguration.Initialize();
+            return RunOpenCommand(target, mode);
+        }
+
         // 单实例：托盘常驻程序必须保证只有一个，否则会重复写库 / 重复 seek
         using var mutex = new Mutex(initiallyOwned: true, @"MediaResume.SingleInstance", out var createdNew);
         if (!createdNew)
@@ -54,6 +77,107 @@ internal static class Program
                 "MediaResume", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 命令行打开入口。
+    ///
+    /// 必须在 WinForms 消息循环里跑 —— SMTC 的 manager 靠 SessionsChanged 事件异步填充
+    /// 会话列表，没有消息泵就看不到"后来才出现"的会话。
+    /// </summary>
+    private static int RunOpenCommand(string target, OpenMode mode)
+    {
+        var exitCode = 1;
+        var ctx = new ApplicationContext();
+
+        var timer = new System.Windows.Forms.Timer { Interval = 30 };
+        timer.Tick += async (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                var s = Settings.Load();
+                using var db = new ResumeDb(s.DatabasePath);
+                db.Open();
+
+                var smtc = new Smtc();
+                await smtc.WarmUpAsync();   // 在 UI 线程（跑着消息泵）上创建 manager
+
+                var launcher = new PlayerLauncher(s, db, smtc, new LaunchHintStore());
+                var outcome = await launcher.OpenAsync(target, mode, CancellationToken.None);
+
+                Emit($"打开目标 : {target}");
+                Emit($"模式     : {mode}");
+                Emit($"结果     : {outcome.Message ?? "(无)"}");
+                Emit($"已跳转   : {outcome.Seeked}");
+                exitCode = outcome.Launched ? 0 : 1;
+            }
+            catch (Exception ex)
+            {
+                Emit($"异常     : {ex.GetType().Name}: {ex.Message}");
+                AppLog.Error("命令行打开失败", ex);
+            }
+            finally
+            {
+                ctx.ExitThread();
+            }
+        };
+
+        timer.Start();
+        Application.Run(ctx);
+        return exitCode;
+    }
+
+    /// <summary>WinExe 没有控制台，输出同时写控制台和文件，确保可读。</summary>
+    private static void Emit(string line)
+    {
+        try { Console.WriteLine(line); } catch { }
+        try
+        {
+            var settings = Settings.Load();
+            var p = Path.Combine(settings.DataDirectory, "last-command.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(p)!);
+            File.AppendAllText(p, line + Environment.NewLine, Encoding.UTF8);
+        }
+        catch { }
+    }
+
+    /// <summary>列出数据库里的全部断点记录。</summary>
+    private static int RunList()
+    {
+        var settings = Settings.Load();
+        var sb = new StringBuilder();
+        sb.AppendLine("=== MediaResume 断点记录 ===");
+
+        using var db = new ResumeDb(settings.DatabasePath);
+        db.Open();
+        var records = db.List();
+
+        sb.AppendLine($"数据库: {settings.DatabasePath}");
+        sb.AppendLine($"记录数: {records.Count}");
+        sb.AppendLine();
+
+        foreach (var r in records)
+        {
+            sb.AppendLine($"[{r.Id}] {Path.GetFileName(r.DisplayPath)}");
+            sb.AppendLine($"    路径       : {r.DisplayPath}");
+            sb.AppendLine($"    位置       : {PlayerLauncher.FormatTime(r.Position)} / {PlayerLauncher.FormatTime(r.Duration)}  ({r.Progress * 100:0}%)");
+            sb.AppendLine($"    最后播放   : {DateTimeOffset.FromUnixTimeSeconds(r.LastPlayedAt).LocalDateTime:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"    累计观看   : {PlayerLauncher.FormatTime(r.TotalWatched)}   看完: {(r.IsComplete ? "是" : "否")}");
+            sb.AppendLine($"    指纹       : {(r.Fingerprint is { Length: > 0 } ? r.Fingerprint[..16] + "…" : "(无)")}");
+            sb.AppendLine();
+        }
+
+        var text = sb.ToString();
+        try { Console.WriteLine(text); } catch { }
+        try
+        {
+            var p = Path.Combine(settings.DataDirectory, "records.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(p)!);
+            File.WriteAllText(p, text, Encoding.UTF8);
+        }
+        catch { }
+        return 0;
     }
 
     /// <summary>诊断模式：打印环境与 SMTC 状态，不启动托盘。</summary>

@@ -27,6 +27,7 @@ public sealed class MainForm : Form
     private readonly CheckBox _autoPlay = new() { Text = "跳转后自动播放（否则跳完先暂停）", AutoSize = true };
     private readonly CheckBox _minimizeOnClose = new() { Text = "关闭主窗口时隐藏到托盘", AutoSize = true };
     private readonly CheckBox _startWithWindows = new() { Text = "开机自动启动", AutoSize = true };
+    private Label? _assocStatus;
 
     private bool _loading;
 
@@ -45,6 +46,7 @@ public sealed class MainForm : Form
         BuildUi();
         LoadSettingsToUi();
         RefreshRecords();
+        RefreshAssocStatus();
 
         FormClosing += OnFormClosing;
     }
@@ -186,6 +188,23 @@ public sealed class MainForm : Form
         AddRow("", _autoPlay);
         AddRow("", _minimizeOnClose);
         AddRow("", _startWithWindows);
+
+        // ---- 文件关联（让"双击即续播"生效） ----
+        var assocStatus = new Label { AutoSize = true, ForeColor = Color.Gray, Margin = new Padding(3, 7, 3, 3) };
+        _assocStatus = assocStatus;
+
+        var assocPanel = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        assocPanel.Controls.Add(MakeButton("注册到系统「打开方式」", ToggleAssoc));
+        assocPanel.Controls.Add(MakeButton("去设置页设为默认…", () => FileAssociation.OpenDefaultAppsSettings()));
+        assocPanel.Controls.Add(MakeButton("卸载关联", () =>
+        {
+            FileAssociation.Unregister();
+            RefreshAssocStatus();
+        }));
+
+        AddRow("文件关联", assocPanel, "Windows 不允许程序静默改默认打开方式，需手动指定一次");
+        table.Controls.Add(assocStatus, 1, row);
+        row++;
 
         var info = new Label
         {
@@ -375,6 +394,34 @@ public sealed class MainForm : Form
     }
 
     public void ShowSettingsTab() => _tabs.SelectedIndex = 1;
+
+    private void ToggleAssoc()
+    {
+        if (FileAssociation.IsRegistered())
+        {
+            var ok = MessageBox.Show(this,
+                "已经注册过了。要重新注册吗？（不会影响系统默认关联）",
+                "MediaResume", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+            if (!ok) { RefreshAssocStatus(); return; }
+        }
+
+        var success = FileAssociation.Register();
+        RefreshAssocStatus();
+        MessageBox.Show(this,
+            success
+                ? "已注册到系统的「打开方式」列表。\n\n接下来请点「去设置页设为默认」，把视频文件类型指给 MediaResume（只需做一次）。"
+                : "注册失败，详情见日志。",
+            "MediaResume", MessageBoxButtons.OK, success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+    }
+
+    private void RefreshAssocStatus()
+    {
+        if (_assocStatus is null) return;
+        _assocStatus.Text = FileAssociation.IsRegistered()
+            ? "状态：已注册（还未设为默认，需手动指定一次）"
+            : "状态：未注册";
+        _assocStatus.ForeColor = FileAssociation.IsRegistered() ? Color.ForestGreen : Color.Gray;
+    }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {

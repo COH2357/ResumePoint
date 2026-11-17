@@ -175,7 +175,12 @@ public sealed class ResumeDb : IDisposable
     /// <summary>
     /// 写入一次播放位置。路径优先；路径变了则用指纹找回同一条记录并更新路径。
     /// </summary>
-    public MediaRecord? UpsertPosition(string rawPath, double positionSeconds, double durationSeconds, string? title, bool markComplete = false)
+    /// <param name="isComplete">
+    /// 是否"已看完"。每次写入都按传入值覆盖 —— 不能是粘滞标志：
+    /// 用户看完后从头重看时，必须把"已看完"清掉，否则以后永远不再续播。
+    /// </param>
+    /// <param name="watchedDelta">本次实际观看的秒数（由调用方按墙钟时间限幅，避免快进被算成观看）。</param>
+    public MediaRecord? UpsertPosition(string rawPath, double positionSeconds, double durationSeconds, string? title, bool isComplete, double watchedDelta = 0)
     {
         lock (_gate)
         {
@@ -241,15 +246,13 @@ public sealed class ResumeDb : IDisposable
                 ins.Parameters.AddWithValue("@po", positionSeconds);
                 ins.Parameters.AddWithValue("@ua", now);
                 ins.Parameters.AddWithValue("@lp", now);
-                ins.Parameters.AddWithValue("@tw", positionSeconds);
-                ins.Parameters.AddWithValue("@ic", markComplete ? 1 : 0);
+                ins.Parameters.AddWithValue("@tw", 0d);   // 首条记录无法算增量，累计观看从第二次写入起算
+                ins.Parameters.AddWithValue("@ic", isComplete ? 1 : 0);
                 ins.ExecuteNonQuery();
                 return FindByPath(path);
             }
 
             // 已有记录 -> 更新位置
-            var delta = positionSeconds - existing.Position;
-            var watched = delta > 0 && delta < 600 ? delta : 0;   // 单次增量异常大就不计入
             using (var cmd = _conn.CreateCommand())
             {
                 cmd.CommandText = """
@@ -263,7 +266,7 @@ public sealed class ResumeDb : IDisposable
                         mtime = @mt,
                         fingerprint = COALESCE(@fp, fingerprint),
                         total_watched = total_watched + @tw,
-                        is_complete = CASE WHEN @ic = 1 THEN 1 ELSE is_complete END
+                        is_complete = @ic
                     WHERE id = @id;
                     """;
                 cmd.Parameters.AddWithValue("@po", positionSeconds);
@@ -274,8 +277,8 @@ public sealed class ResumeDb : IDisposable
                 cmd.Parameters.AddWithValue("@sz", size);
                 cmd.Parameters.AddWithValue("@mt", mtime);
                 cmd.Parameters.AddWithValue("@fp", (object?)FileFingerprint.Compute(rawPath) ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@tw", watched);
-                cmd.Parameters.AddWithValue("@ic", markComplete ? 1 : 0);
+                cmd.Parameters.AddWithValue("@tw", Math.Max(0, watchedDelta));
+                cmd.Parameters.AddWithValue("@ic", isComplete ? 1 : 0);
                 cmd.Parameters.AddWithValue("@id", existing.Id);
                 cmd.ExecuteNonQuery();
             }

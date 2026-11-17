@@ -10,6 +10,7 @@ public sealed class TrayHost : IDisposable
     private readonly ResumeDb _db;
     private readonly Recorder _recorder;
     private readonly PlayerLauncher _launcher;
+    private readonly Smtc _smtc;
 
     private readonly NotifyIcon _tray;
     private readonly ContextMenuStrip _menu;
@@ -33,6 +34,7 @@ public sealed class TrayHost : IDisposable
         _db = db;
         _recorder = recorder;
         _launcher = launcher;
+        _smtc = recorder.Smtc;
 
         _tray = new NotifyIcon
         {
@@ -64,6 +66,10 @@ public sealed class TrayHost : IDisposable
         _recorder.Changed += OnRecorderChanged;
 
         Context = new ApplicationContext();
+
+        // 关键：SMTC manager 必须在有消息泵的 UI 线程上创建，
+        // 否则它看不到"后来才出现"的媒体会话（播放器是之后才启动的）。
+        _ = _smtc.WarmUpAsync();
 
         RefreshRecentMenu();
         UpdateStatus();

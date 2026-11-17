@@ -20,7 +20,10 @@ public sealed class Recorder
     private DateTime _lastWriteUtc = DateTime.MinValue;
     private string? _lastWrittenPath;
     private double _lastWrittenPosition;
+    private double _lastObservedPosition;
+    private DateTime _lastObservedUtc = DateTime.MinValue;
     private bool _hadSession;
+    private DateTime _lastSessionSeenUtc = DateTime.MinValue;
 
     public event Action<RecorderSnapshot>? Changed;
 
@@ -31,6 +34,9 @@ public sealed class Recorder
         _smtc = smtc;
         _hints = hints;
     }
+
+    /// <summary>暴露给托盘宿主，用于在 UI 线程上预热 SMTC manager。</summary>
+    public Smtc Smtc => _smtc;
 
     public sealed class RecorderSnapshot
     {
@@ -51,9 +57,20 @@ public sealed class Recorder
         {
             // 播放器退出了 -> 会话消失时补一次最终写入
             if (_hadSession) { FinalWrite(); _hadSession = false; }
+
+            // 长时间看不到会话时丢弃缓存的 manager：
+            // 若 manager 是在"会话还不存在"时创建的，它可能永远看不到后来出现的会话
+            if (_lastSessionSeenUtc == DateTime.MinValue ||
+                (DateTime.UtcNow - _lastSessionSeenUtc).TotalSeconds > 10)
+            {
+                _smtc.InvalidateManager();
+            }
+
             Changed?.Invoke(new RecorderSnapshot());
             return;
         }
+
+        _lastSessionSeenUtc = DateTime.UtcNow;
 
         if (session.Status is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped
                            or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed)
@@ -97,11 +114,27 @@ public sealed class Recorder
         try
         {
             var duration = session.EndTime.TotalSeconds;
-            var complete = duration > 0 && duration - position <= _settings.CompleteWithinSeconds;
 
-            _db.UpsertPosition(path, position, duration, session.Title, complete);
+            // "已看完"每次重新算，不做粘滞：
+            // 用户看完后从头重看时必须清掉，否则以后永远不再续播。
+            var isComplete = duration > 0 && duration - position <= _settings.CompleteWithinSeconds;
 
-            _lastWriteUtc = DateTime.UtcNow;
+            // 累计观看：按墙钟时间限幅，避免快进/跳段被算成"看了"
+            var watched = 0d;
+            var now = DateTime.UtcNow;
+            if (_lastObservedUtc != DateTime.MinValue)
+            {
+                var posDelta = position - _lastObservedPosition;
+                var wall = (now - _lastObservedUtc).TotalSeconds;
+                if (posDelta > 0 && posDelta < 600)
+                    watched = Math.Min(posDelta, wall * 1.5 + 2);
+            }
+            _lastObservedPosition = position;
+            _lastObservedUtc = now;
+
+            _db.UpsertPosition(path, position, duration, session.Title, isComplete, watched);
+
+            _lastWriteUtc = now;
             _lastWrittenPath = path;
             _lastWrittenPosition = position;
         }
@@ -117,7 +150,8 @@ public sealed class Recorder
         try
         {
             var rec = _db.FindByPath(_lastWrittenPath);
-            if (rec is not null) _db.UpsertPosition(_lastWrittenPath, _lastWrittenPosition, rec.Duration, rec.Title);
+            if (rec is not null)
+                _db.UpsertPosition(_lastWrittenPath, _lastWrittenPosition, rec.Duration, rec.Title, rec.IsComplete);
         }
         catch { }
     }
