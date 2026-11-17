@@ -9,6 +9,8 @@ artifacts/
 
 # 安装包产物
 installer/output/
+installer/output_flagtest/
+installer/_flagtest.iss
 
 # 运行时产物
 *.log

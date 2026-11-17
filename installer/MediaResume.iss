@@ -4,7 +4,6 @@
 ;  构建：
 ;    dotnet publish src\MediaResume -c Release -r win-x64 --self-contained false -o publish
 ;    iscc installer\MediaResume.iss
-;
 ;  设计取舍：
 ;   * PrivilegesRequired=lowest  → 按用户安装到 %LOCALAPPDATA%\Programs
 ;     （SMTC 必须跑在交互式桌面会话里，本来就是每用户工具，不需要管理员）
@@ -49,16 +48,20 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 chinesesimplified.CreateDesktopIcon=创建桌面快捷方式
 chinesesimplified.AutoStart=登录时自动启动（后台托盘常驻）
-chinesesimplified.RegisterOpenWith=注册到系统的"打开方式"列表
+; 注意：CustomMessages 的值里不能用 ASCII 双引号 —— {cm:} 展开后会破坏 Description 参数的引号配对
+chinesesimplified.RegisterOpenWith=注册到系统的「打开方式」列表
 chinesesimplified.AssocHint=注册后可在 设置→应用→默认应用 里把视频文件默认交给 MediaResume
 
 [Tasks]
+; 注意：Inno Setup 6.7 的任务 flag 里没有 "checked" —— 默认就是勾选；
+;       要默认不勾选才写 "unchecked"。（写 checked 会报 unknown flag）
 Name: "autostart"; Description: "{cm:AutoStart}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "openwith";   Description: "{cm:RegisterOpenWith}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checked
+Name: "openwith";   Description: "{cm:RegisterOpenWith}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "..\..\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; installer\ 的上一级就是项目根，publish\ 与之同级
+Source: "..\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{userdesktop}\{#AppNameCN}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
