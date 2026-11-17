@@ -224,9 +224,9 @@ media(id, path UNIQUE, display_path, title, size, mtime, fingerprint,
 
 `.github/workflows/` 不存在。Windows 11 + Media Player 的实机验证也没法自动化。
 
-### P2-11　没有 LICENSE / CONTRIBUTING / SECURITY.md
+### P2-11　没有 CONTRIBUTING / SECURITY.md
 
-GitHub 仓库 `license: null`。公开仓库建议补 MIT 等授权（**法律含义，需用户拍板**）。
+`LICENSE` 已由用户补上（**MIT**，Copyright (c) 2026 Zhsj）。还缺 `CONTRIBUTING.md` 与 `SECURITY.md`。
 
 ### P2-12　卸载后不清理数据目录
 
@@ -309,7 +309,8 @@ WinExe 没有控制台，所以结果写进 `diag.txt` / `records.txt`。命令�
 
 - self-contained 发布（免 .NET 运行时依赖）
 - 代码签名（消除 SmartScreen 警告）
-- 加 `LICENSE`（MIT）、`CONTRIBUTING.md`
+- ~~加 `LICENSE`~~ —— 已完成（MIT）
+- 补 `CONTRIBUTING.md` / `SECURITY.md`
 - GitHub Actions：至少跑 build + 单测；集成测试需要一台装了 Media Player 的 Windows 机器（可用自托管 runner）
 
 ---
