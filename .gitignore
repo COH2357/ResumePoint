@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+artifacts/
+
+# 安装包产物
+installer/output/
+
+# 运行时产物
+*.log
+*.db-wal
+*.db-shm
+
+# 系统垃圾
+Thumbs.db
+Desktop.ini
+.DS_Store
