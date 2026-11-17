@@ -133,24 +133,30 @@ src/ResumePoint/
 ├── Program.cs            入口：单实例互斥 / --diag / --list / --open
 ├── app.manifest          asInvoker（GSMTC 需要交互式桌面会话）
 ├── Core/
-│   ├── Settings.cs        设置持久化（%APPDATA%），数据目录可自定义
+│   ├── Settings.cs        设置持久化（%APPDATA%），数据目录可自定义 + 旧目录迁移
 │   ├── ResumeDb.cs        SQLite 断点表：per-file + 指纹兜底 + WAL
 │   ├── FileFingerprint.cs size+首尾64KB 的 SHA-256
-│   ├── Smtc.cs            SMTC 封装（缓存 manager，避免反复 RequestAsync）
+│   ├── Smtc.cs            SMTC 封装（manager 固定在 UI 线程创建）
 │   ├── PlayerState.cs     读 AppState.json（容错 ComponentStates 包裹）
 │   ├── PathResolver.cs    标题↔文件名匹配 + 路径猜测置信度
 │   ├── Recorder.cs        记录端：边播边写
-│   ├── PlayerLauncher.cs  播放端：打开→等会话→seek
+│   ├── PlayerLauncher.cs  播放端：打开→等就绪→seek
+│   ├── LaunchHandoff.cs   跨进程交接（--open 与托盘之间）
+│   ├── FileAssociation.cs 注册进系统"打开方式"列表
 │   ├── AutoStart.cs       开机自启（启动文件夹快捷方式）
 │   └── AppLog.cs          文件日志
-└── UI/
-    ├── TrayHost.cs        托盘常驻 + 菜单 + 状态
-    ├── MainForm.cs        主面板：记录表 / 设置页
-    └── IconFactory.cs     运行时生成托盘图标
+├── UI/
+│   ├── TrayHost.cs        托盘常驻 + 菜单 + 状态
+│   ├── MainForm.cs        主面板：记录表 / 设置页
+│   └── IconFactory.cs     托盘图标（多尺寸 ico → exe 资源 → 运行时绘制）
+└── ResumePoint.ico/.png   应用图标
 
+docs/STATUS.md            项目现状文档（给 Agent 读）
+docs/research/            原始可行性调研（从 zip 解出）
 installer/ResumePoint.iss Inno Setup 安装脚本
-probe/                     研究期 PowerShell 实测探针
-win11-mediaplayer-resume-export.zip  原始可行性调研包
+tools/Generate-Icon.ps1   图标生成脚本
+probe/                    研究期 PowerShell 实测探针 + 手工验证脚本
+win11-mediaplayer-resume-export.zip  原始可行性调研包（原件）
 ```
 
 ## 已知限制
@@ -162,6 +168,7 @@ win11-mediaplayer-resume-export.zip  原始可行性调研包
 
 ## 相关文档
 
-- `docs/feasibility-report.md` —— 可行性主报告
-- `docs/options-deep-dive.md` —— 8 条路线逐条对比
-- `HANDOFF.md` —— 研究交接文档
+- **`docs/STATUS.md`** —— **项目现状文档（给 Agent 读）**：已验证事实 / 已知问题分级 / 优化方向 / 踩过的坑。**接手先读这份。**
+- `docs/research/feasibility-report.md` —— 可行性主报告
+- `docs/research/options-deep-dive.md` —— 8 条路线逐条对比
+- `docs/research/HANDOFF.md` —— 研究交接文档
