@@ -6,7 +6,7 @@ public static class AppLog
     private static readonly object Gate = new();
     private const long MaxBytes = 2 * 1024 * 1024;
 
-    public static string LogPath => Path.Combine(Settings.DefaultDataDirectory(), "logs", "mediaresume.log");
+    public static string LogPath => Path.Combine(Settings.DefaultDataDirectory(), "logs", "resumepoint.log");
 
     public static void Info(string message) => Write("INFO", message, null);
     public static void Warn(string message) => Write("WARN", message, null);
