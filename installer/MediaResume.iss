@@ -40,6 +40,7 @@ CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppNameCN}
+SetupIconFile=..\src\MediaResume\MediaResume.ico
 SetupLogging=yes
 
 [Languages]

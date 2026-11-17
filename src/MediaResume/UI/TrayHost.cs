@@ -25,6 +25,7 @@ public sealed class TrayHost : IDisposable
     private MainForm? _main;
     private bool _recordingEnabled = true;
     private Recorder.RecorderSnapshot? _lastSnap;
+    private string _lastStatus = "";
 
     public ApplicationContext Context { get; }
 
@@ -67,8 +68,15 @@ public sealed class TrayHost : IDisposable
 
         Context = new ApplicationContext();
 
+        // 强制创建窗口句柄：Control.BeginInvoke 在没有句柄时会直接抛
+        // InvalidOperationException（"Invoke or BeginInvoke cannot be called on a control
+        // until the window handle has been created"），状态更新会被静默吞掉。
+        _ = _dispatch.Handle;
+
         // 关键：SMTC manager 必须在有消息泵的 UI 线程上创建，
         // 否则它看不到"后来才出现"的媒体会话（播放器是之后才启动的）。
+        // AttachDispatcher 让后台线程的请求也能把创建动作调度回 UI 线程。
+        _smtc.AttachDispatcher(_dispatch);
         _ = _smtc.WarmUpAsync();
 
         RefreshRecentMenu();
@@ -130,24 +138,38 @@ public sealed class TrayHost : IDisposable
     private void UpdateStatus()
     {
         var snap = _lastSnap;
+        string status;
+        string current;
+
         if (snap is null || snap.Session is null)
         {
-            _currentItem.Text = "当前：—";
-            SetStatus("● 空闲（播放器未运行）", Color.Gray);
-            return;
-        }
-
-        var pos = PlayerLauncher.FormatTime(snap.PositionSeconds);
-        if (snap.Path is not null)
-        {
-            var name = Path.GetFileName(snap.Path);
-            _currentItem.Text = $"当前：{name}  @ {pos}";
-            SetStatus(snap.Confidence >= PathGuess.High ? "● 记录中" : "● 等待识别文件", Color.ForestGreen);
+            current = "当前：—";
+            status = "● 空闲（播放器未运行）";
         }
         else
         {
-            _currentItem.Text = $"当前：（{snap.Title ?? "未知"}） @ {pos}";
-            SetStatus("● 等待识别文件", Color.DarkOrange);
+            var pos = PlayerLauncher.FormatTime(snap.PositionSeconds);
+            if (snap.Path is not null)
+            {
+                var name = Path.GetFileName(snap.Path);
+                current = $"当前：{name}  @ {pos}";
+                status = snap.Confidence >= PathGuess.High ? "● 记录中" : "● 等待识别文件";
+            }
+            else
+            {
+                current = $"当前：（{snap.Title ?? "未知"}） @ {pos}";
+                status = "● 等待识别文件";
+            }
+        }
+
+        _currentItem.Text = current;
+        SetStatus(status, status.Contains("空闲") ? Color.Gray
+                    : status.Contains("等待") ? Color.DarkOrange : Color.ForestGreen);
+
+        if (status != _lastStatus)
+        {
+            _lastStatus = status;
+            AppLog.Info($"托盘状态: {status}  {current}");
         }
     }
 

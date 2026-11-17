@@ -24,6 +24,7 @@ public sealed class Recorder
     private DateTime _lastObservedUtc = DateTime.MinValue;
     private bool _hadSession;
     private DateTime _lastSessionSeenUtc = DateTime.MinValue;
+    private string _lastSig = "";
 
     public event Action<RecorderSnapshot>? Changed;
 
@@ -82,10 +83,31 @@ public sealed class Recorder
         _hadSession = true;
 
         var state = PlayerState.Read();
-        var guess = PathResolver.Resolve(session, state, _hints.Latest);
+
+        // 路径线索：优先本进程内的启动提示，其次是跨进程交接文件
+        //（双击文件时 --open 是独立进程，托盘里的记录端只能靠交接文件知道打开的是哪个文件）
+        var hint = _hints.Latest;
+        if (hint is null || !hint.IsFresh(TimeSpan.FromMinutes(3)))
+        {
+            var handoff = LaunchHandoff.Read(TimeSpan.FromMinutes(2));
+            if (handoff is not null)
+                hint = new LaunchHint { Path = handoff.MediaPath, At = handoff.At };
+        }
+
+        var guess = PathResolver.Resolve(session, state, hint);
 
         // 识别不到足够可信的文件 -> 不写
         var path = guess is not null && guess.Confidence >= PathGuess.High ? guess.Path : null;
+
+        // 状态变化时记一条日志，便于排查"托盘显示空闲但播放器在播"这类问题
+        var sig = $"{session.Title}|{path}|{guess?.Source}";
+        if (sig != _lastSig)
+        {
+            _lastSig = sig;
+            AppLog.Info($"会话: title='{session.Title}' status={session.Status} " +
+                        $"pos={session.Position.TotalSeconds:0.0} -> 解析={guess?.Source ?? "(无)"} " +
+                        $"路径={path ?? "(未确认)"} 队列=[{string.Join(" | ", state.QueueSources)}]");
+        }
 
         Changed?.Invoke(new RecorderSnapshot
         {
@@ -134,6 +156,7 @@ public sealed class Recorder
 
             _db.UpsertPosition(path, position, duration, session.Title, isComplete, watched);
 
+            AppLog.Info($"写入断点: {Path.GetFileName(path)} @ {position:0.0}s / {duration:0.0}s");
             _lastWriteUtc = now;
             _lastWrittenPath = path;
             _lastWrittenPosition = position;

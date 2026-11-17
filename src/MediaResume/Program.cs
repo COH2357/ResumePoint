@@ -89,6 +89,7 @@ internal static class Program
     {
         var exitCode = 1;
         var ctx = new ApplicationContext();
+        var dispatcher = new Control();   // 用于把 SMTC manager 的创建留在 UI 线程
 
         var timer = new System.Windows.Forms.Timer { Interval = 30 };
         timer.Tick += async (_, _) =>
@@ -101,6 +102,7 @@ internal static class Program
                 db.Open();
 
                 var smtc = new Smtc();
+                smtc.AttachDispatcher(dispatcher);
                 await smtc.WarmUpAsync();   // 在 UI 线程（跑着消息泵）上创建 manager
 
                 var launcher = new PlayerLauncher(s, db, smtc, new LaunchHintStore());

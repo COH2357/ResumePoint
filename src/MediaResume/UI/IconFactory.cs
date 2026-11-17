@@ -12,8 +12,41 @@ internal static class IconFactory
     public static Icon Get()
     {
         if (_cached is not null) return _cached;
-        _cached = Create();
+        _cached = LoadFromFile() ?? ExtractFromExe() ?? Create();
         return _cached;
+    }
+
+    /// <summary>优先用发布目录里的多尺寸 MediaResume.ico（由 tools\Generate-Icon.ps1 生成）。</summary>
+    private static Icon? LoadFromFile()
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "MediaResume.ico");
+            if (!File.Exists(path)) return null;
+            using var fs = File.OpenRead(path);
+            using var icon = new Icon(fs);
+            return (Icon)icon.Clone();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>退化方案：从 exe 资源里抠出应用图标。</summary>
+    private static Icon? ExtractFromExe()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return null;
+            var icon = Icon.ExtractAssociatedIcon(exe);
+            return icon is null ? null : (Icon)icon.Clone();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static Icon Create()

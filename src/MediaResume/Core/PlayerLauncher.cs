@@ -46,7 +46,9 @@ public sealed class PlayerLauncher
     public async Task<OpenOutcome> OpenAsync(string path, OpenMode mode, CancellationToken ct)
     {
         // 记录我们启动了哪个文件 —— 供记录端做高置信度路径识别
+        // 同一个进程内用 hints；跨进程（--open 是独立进程）用交接文件
         _hints.Set(path);
+        LaunchHandoff.Write(path);
 
         bool launched;
         try
