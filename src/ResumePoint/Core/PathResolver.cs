@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>标题与文件名的匹配规则。</summary>
 public static class PathMatcher

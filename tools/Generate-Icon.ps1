@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
-    生成 MediaResume 的应用图标（多尺寸 .ico）。
+    生成 ResumePoint 的应用图标（多尺寸 .ico）。
 
 .DESCRIPTION
     用 GDI+ 矢量绘制，不依赖任何外部素材：
       圆角方形 + 靛蓝→天青渐变底 + 白色顺时针回转箭头（⟳，"续播/回到断点"的语义）
 
     输出：
-      src\MediaResume\MediaResume.ico    （应用图标，托盘/资源管理器/任务栏/安装包共用）
-      src\MediaResume\MediaResume.png    （256px 预览，便于肉眼检查）
+      src\ResumePoint\ResumePoint.ico    （应用图标，托盘/资源管理器/任务栏/安装包共用）
+      src\ResumePoint\ResumePoint.png    （256px 预览，便于肉眼检查）
 
     用法：
       pwsh tools\Generate-Icon.ps1
@@ -18,8 +18,8 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $PSScriptRoot
-$icoPath = Join-Path $root "src\MediaResume\MediaResume.ico"
-$pngPath = Join-Path $root "src\MediaResume\MediaResume.png"
+$icoPath = Join-Path $root "src\ResumePoint\ResumePoint.ico"
+$pngPath = Join-Path $root "src\ResumePoint\ResumePoint.png"
 
 # ---------------------------------------------------------------- 绘制
 function New-MasterBitmap([int]$size) {

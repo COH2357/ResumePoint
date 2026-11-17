@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 开机自启。
@@ -11,7 +11,7 @@ namespace MediaResume.Core;
 /// </summary>
 public static class AutoStart
 {
-    private const string ShortcutName = "MediaResume.lnk";
+    private const string ShortcutName = "ResumePoint.lnk";
 
     private static string StartupDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Startup));
@@ -41,7 +41,7 @@ public static class AutoStart
             dynamic? link = shell.CreateShortcut(ShortcutPath);
             link.TargetPath = exe;
             link.WorkingDirectory = Path.GetDirectoryName(exe)!;
-            link.Description = "MediaResume 断点续播伴生工具";
+            link.Description = "ResumePoint 断点续播伴生工具";
             link.WindowStyle = 1;   // 最小化（托盘程序没有窗口）
             link.Save();
         }

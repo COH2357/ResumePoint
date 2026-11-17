@@ -3,7 +3,7 @@ using Windows.Media.Control;
 using Windows.Storage;
 using Windows.System;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 public enum OpenMode
 {

@@ -1,7 +1,13 @@
-# MediaResume —— Windows 11 新版媒体播放器「断点续播」伴生工具
+# ResumePoint
 
-> 让**每一次打开视频都从上次断点继续**。
-> 不修改媒体播放器本体，通过 Windows 官方 **SMTC** 接口读取 / 跳转播放位置。
+> **Pick up exactly where you left off.**
+>
+> A small companion app for Windows 11 Media Player. It quietly remembers where you
+> stopped each video and jumps straight back to that moment the next time you open it —
+> no plugin, no changes to the player itself.
+
+让**每一次打开视频都从上次断点继续**。
+不修改媒体播放器本体，通过 Windows 官方 **SMTC** 接口读取 / 跳转播放位置。
 
 ---
 
@@ -17,7 +23,7 @@
 └───────────────┬──────────────────────────┘
                 │  官方 API，双向
    ┌────────────┴────────────┐
-   │   MediaResume（本工具）   │
+   │   ResumePoint（本工具）   │
    ├─────────────────────────┤
    │ ①记录端：轮询当前位置      │
    │   → 写进自己的 per-file 表  │
@@ -73,7 +79,7 @@ Windows 11 专业版 10.0.26300 ｜ Media Player 11.2609.11.0 ｜ .NET 8 SDK 8.0
 
 ### 设置项
 
-- **记录写入位置**可自定义（默认 `%LOCALAPPDATA%\MediaResume`）
+- **记录写入位置**可自定义（默认 `%LOCALAPPDATA%\ResumePoint`）
 - **开机自动启动**（登录时启动，⚠️ **不能**做成 Windows 服务——SMTC 必须在交互式桌面会话里用）
 - 轮询间隔 / 落盘间隔 / 最小续播秒数 / 距片尾多少秒算看完
 
@@ -87,23 +93,23 @@ Windows 11 专业版 10.0.26300 ｜ Media Player 11.2609.11.0 ｜ .NET 8 SDK 8.0
 
 ```powershell
 # 打开并续播
-MediaResume.exe --open "D:\videos\a.mkv"
+ResumePoint.exe --open "D:\videos\a.mkv"
 
 # 从头打开（忽略断点）
-MediaResume.exe --open-start "D:\videos\a.mkv"
+ResumePoint.exe --open-start "D:\videos\a.mkv"
 
 # 诊断：环境 / SMTC 会话 / 播放器落盘状态
-MediaResume.exe --diag
+ResumePoint.exe --diag
 
 # 列出全部断点记录
-MediaResume.exe --list
+ResumePoint.exe --list
 ```
 
 ### 让"双击"走本工具
 
 Windows 10+ 的 `UserChoice` 有哈希保护，**程序无法静默改默认关联**。安装器会把自己注册进系统的"打开方式"列表，然后：
 
-> **设置 → 应用 → 默认应用** → 选 MediaResume → 把 `.mp4` / `.mkv` 等指过去
+> **设置 → 应用 → 默认应用** → 选 ResumePoint → 把 `.mp4` / `.mkv` 等指过去
 
 只此一次，之后双击即续播。
 
@@ -111,19 +117,19 @@ Windows 10+ 的 `UserChoice` 有哈希保护，**程序无法静默改默认关�
 
 ```powershell
 # 开发构建
-dotnet build src\MediaResume
+dotnet build src\ResumePoint
 
 # 发布
-dotnet publish src\MediaResume -c Release -r win-x64 --self-contained false -o publish
+dotnet publish src\ResumePoint -c Release -r win-x64 --self-contained false -o publish
 
 # 打安装包（需要 Inno Setup 6）
-iscc installer\MediaResume.iss
+iscc installer\ResumePoint.iss
 ```
 
 ## 项目结构
 
 ```
-src/MediaResume/
+src/ResumePoint/
 ├── Program.cs            入口：单实例互斥 / --diag / --list / --open
 ├── app.manifest          asInvoker（GSMTC 需要交互式桌面会话）
 ├── Core/
@@ -142,7 +148,7 @@ src/MediaResume/
     ├── MainForm.cs        主面板：记录表 / 设置页
     └── IconFactory.cs     运行时生成托盘图标
 
-installer/MediaResume.iss Inno Setup 安装脚本
+installer/ResumePoint.iss Inno Setup 安装脚本
 probe/                     研究期 PowerShell 实测探针
 win11-mediaplayer-resume-export.zip  原始可行性调研包
 ```

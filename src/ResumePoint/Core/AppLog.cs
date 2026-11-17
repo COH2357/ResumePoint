@@ -1,4 +1,4 @@
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>极简文件日志（单文件、按天轮转上限，避免无限增长）。</summary>
 public static class AppLog

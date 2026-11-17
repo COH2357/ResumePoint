@@ -1,8 +1,8 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
-using MediaResume.Core;
+using ResumePoint.Core;
 
-namespace MediaResume.UI;
+namespace ResumePoint.UI;
 
 /// <summary>运行时生成托盘图标（避免额外资源文件依赖）。</summary>
 internal static class IconFactory
@@ -16,12 +16,12 @@ internal static class IconFactory
         return _cached;
     }
 
-    /// <summary>优先用发布目录里的多尺寸 MediaResume.ico（由 tools\Generate-Icon.ps1 生成）。</summary>
+    /// <summary>优先用发布目录里的多尺寸 ResumePoint.ico（由 tools\Generate-Icon.ps1 生成）。</summary>
     private static Icon? LoadFromFile()
     {
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "MediaResume.ico");
+            var path = Path.Combine(AppContext.BaseDirectory, "ResumePoint.ico");
             if (!File.Exists(path)) return null;
             using var fs = File.OpenRead(path);
             using var icon = new Icon(fs);

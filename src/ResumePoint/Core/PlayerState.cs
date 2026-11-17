@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 新版媒体播放器的落盘状态（%LOCALAPPDATA%\Packages\Microsoft.ZuneMusic_8wekyb3d8bbwe\LocalState\AppState.json）。

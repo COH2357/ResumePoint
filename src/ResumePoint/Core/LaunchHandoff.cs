@@ -1,11 +1,11 @@
 using System.Text.Json;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 跨进程交接：把"刚打开了哪个文件"告诉托盘里的记录端。
 ///
-/// 背景：双击文件时，shell 启动的是一个**独立的** `MediaResume.exe --open "&lt;路径&gt;"` 进程，
+/// 背景：双击文件时，shell 启动的是一个**独立的** `ResumePoint.exe --open "&lt;路径&gt;"` 进程，
 /// 而记录端常驻在**另一个**托盘进程里。两者互不相识 —— 记录端只能去猜"现在播的是哪个文件"：
 ///   * SMTC 的 Title 只有文件名，没有完整路径
 ///   * 播放器的 AppState.json 队列是**滞后写入**的（实测播放器换成别的文件后，

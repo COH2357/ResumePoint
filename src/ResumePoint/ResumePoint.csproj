@@ -8,12 +8,12 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>MediaResume</RootNamespace>
-    <AssemblyName>MediaResume</AssemblyName>
+    <RootNamespace>ResumePoint</RootNamespace>
+    <AssemblyName>ResumePoint</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>MediaResume.ico</ApplicationIcon>
-    <Product>MediaResume</Product>
-    <AssemblyTitle>MediaResume 断点续播伴生工具</AssemblyTitle>
+    <ApplicationIcon>ResumePoint.ico</ApplicationIcon>
+    <Product>ResumePoint</Product>
+    <AssemblyTitle>ResumePoint 断点续播伴生工具</AssemblyTitle>
     <Version>0.1.0</Version>
     <FileVersion>0.1.0.0</FileVersion>
     <Company>Local</Company>
@@ -27,8 +27,8 @@
 
   <ItemGroup>
     <!-- 托盘图标用多尺寸 ico（由 tools\Generate-Icon.ps1 生成），同时也是 exe 的应用图标 -->
-    <None Include="MediaResume.ico" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="MediaResume.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="ResumePoint.ico" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="ResumePoint.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

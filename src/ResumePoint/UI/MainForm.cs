@@ -1,7 +1,7 @@
 using System.Drawing;
-using MediaResume.Core;
+using ResumePoint.Core;
 
-namespace MediaResume.UI;
+namespace ResumePoint.UI;
 
 /// <summary>主面板：记录列表 + 设置。</summary>
 public sealed class MainForm : Form
@@ -38,7 +38,7 @@ public sealed class MainForm : Form
         _launcher = launcher;
         _onRecordsChanged = onRecordsChanged;
 
-        Text = "MediaResume —— 断点续播";
+        Text = "ResumePoint —— 断点续播";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(760, 480);
         Size = new Size(940, 600);
@@ -338,19 +338,19 @@ public sealed class MainForm : Form
         var rec = SelectedRecord();
         if (rec is null)
         {
-            MessageBox.Show(this, "请先选中一条记录。", "MediaResume", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "请先选中一条记录。", "ResumePoint", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         try
         {
             var outcome = await _launcher.OpenAsync(rec.DisplayPath, mode, CancellationToken.None);
-            MessageBox.Show(this, outcome.Message ?? "已完成", "MediaResume",
+            MessageBox.Show(this, outcome.Message ?? "已完成", "ResumePoint",
                 MessageBoxButtons.OK, outcome.Seeked ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
         catch (Exception ex)
         {
             AppLog.Error("打开失败", ex);
-            MessageBox.Show(this, ex.Message, "MediaResume", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, "ResumePoint", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -377,7 +377,7 @@ public sealed class MainForm : Form
     {
         var rec = SelectedRecord();
         if (rec is null) return;
-        if (MessageBox.Show(this, $"删除这条记录？\n\n{rec.DisplayPath}", "MediaResume",
+        if (MessageBox.Show(this, $"删除这条记录？\n\n{rec.DisplayPath}", "ResumePoint",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
         _db.Delete(rec.Id);
         RefreshRecords();
@@ -386,7 +386,7 @@ public sealed class MainForm : Form
 
     private void ClearAll()
     {
-        if (MessageBox.Show(this, "清空全部断点记录？此操作不可撤销。", "MediaResume",
+        if (MessageBox.Show(this, "清空全部断点记录？此操作不可撤销。", "ResumePoint",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
         _db.Clear();
         RefreshRecords();
@@ -401,7 +401,7 @@ public sealed class MainForm : Form
         {
             var ok = MessageBox.Show(this,
                 "已经注册过了。要重新注册吗？（不会影响系统默认关联）",
-                "MediaResume", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+                "ResumePoint", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
             if (!ok) { RefreshAssocStatus(); return; }
         }
 
@@ -409,9 +409,9 @@ public sealed class MainForm : Form
         RefreshAssocStatus();
         MessageBox.Show(this,
             success
-                ? "已注册到系统的「打开方式」列表。\n\n接下来请点「去设置页设为默认」，把视频文件类型指给 MediaResume（只需做一次）。"
+                ? "已注册到系统的「打开方式」列表。\n\n接下来请点「去设置页设为默认」，把视频文件类型指给 ResumePoint（只需做一次）。"
                 : "注册失败，详情见日志。",
-            "MediaResume", MessageBoxButtons.OK, success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            "ResumePoint", MessageBoxButtons.OK, success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
     }
 
     private void RefreshAssocStatus()

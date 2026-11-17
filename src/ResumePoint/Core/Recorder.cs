@@ -1,6 +1,6 @@
 using Windows.Media.Control;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 记录端：轮询 SMTC，把"当前播到第几秒"写进数据库。

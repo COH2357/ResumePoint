@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
-/// 用户设置。持久化在 %APPDATA%\MediaResume\settings.json（位置固定），
+/// 用户设置。持久化在 %APPDATA%\ResumePoint\settings.json（位置固定），
 /// 而记录数据库放在可自定义的 data 目录里 —— 移动数据目录不会丢设置。
 /// </summary>
 public sealed class Settings
@@ -49,11 +49,23 @@ public sealed class Settings
     public string LogDirectory => Path.Combine(DataDirectory, "logs");
 
     public static string DefaultDataDirectory() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MediaResume");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ResumePoint");
 
     /// <summary>设置文件的固定位置 —— 不随 DataDirectory 变化。</summary>
     public static string SettingsPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MediaResume", "settings.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ResumePoint", "settings.json");
+
+    /// <summary>改名前的应用目录名 —— 用于把旧数据迁移过来。</summary>
+    public const string LegacyAppFolder = "MediaResume";
+
+    public static string LegacySettingsPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), LegacyAppFolder, "settings.json");
+
+    public static string LegacyDataDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), LegacyAppFolder);
+
+    /// <summary>设置是从旧目录读出来的（改名前遗留）。</summary>
+    public bool LoadedFromLegacy { get; private set; }
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -63,26 +75,66 @@ public sealed class Settings
 
     public static Settings Load()
     {
-        try
+        // 先读新位置，再回退到改名前的旧位置（保证升级后设置不丢）
+        var s = TryRead(SettingsPath);
+        if (s is null)
         {
-            if (File.Exists(SettingsPath))
-            {
-                var s = JsonSerializer.Deserialize<Settings>(File.ReadAllText(SettingsPath), JsonOpts);
-                if (s is not null)
-                {
-                    s.Normalize();
-                    return s;
-                }
-            }
+            s = TryRead(LegacySettingsPath);
+            if (s is not null) s.LoadedFromLegacy = true;
         }
-        catch
+
+        if (s is not null)
         {
-            // 设置损坏时回退到默认值，不让程序起不来
+            s.Normalize();
+            return s;
         }
 
         var d = new Settings();
         d.Normalize();
         return d;
+    }
+
+    private static Settings? TryRead(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            return JsonSerializer.Deserialize<Settings>(File.ReadAllText(path), JsonOpts);
+        }
+        catch
+        {
+            // 设置损坏时回退到默认值，不让程序起不来
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 把改名前的数据目录（断点库）迁移到新位置。已有同名文件不覆盖。
+    /// </summary>
+    public static void MigrateLegacyData(Settings settings)
+    {
+        try
+        {
+            var oldDir = LegacyDataDirectory;
+            var newDir = settings.DataDirectory;
+
+            if (!Directory.Exists(oldDir)) return;
+            if (string.Equals(oldDir.TrimEnd('\\'), newDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) return;
+
+            Directory.CreateDirectory(newDir);
+            foreach (var name in new[] { "resumes.db", "resumes.db-wal", "resumes.db-shm" })
+            {
+                var src = Path.Combine(oldDir, name);
+                var dst = Path.Combine(newDir, name);
+                if (!File.Exists(src) || File.Exists(dst)) continue;
+                try { File.Copy(src, dst, overwrite: false); } catch { }
+            }
+            AppLog.Info($"已从旧数据目录迁移断点库: {oldDir} -> {newDir}");
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("迁移旧数据失败", ex);
+        }
     }
 
     public void Save()

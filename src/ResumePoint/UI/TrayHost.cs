@@ -1,7 +1,7 @@
 using System.Drawing;
-using MediaResume.Core;
+using ResumePoint.Core;
 
-namespace MediaResume.UI;
+namespace ResumePoint.UI;
 
 /// <summary>托盘宿主：常驻后台、承载菜单、驱动记录端循环。</summary>
 public sealed class TrayHost : IDisposable
@@ -40,7 +40,7 @@ public sealed class TrayHost : IDisposable
         _tray = new NotifyIcon
         {
             Icon = IconFactory.Get(),
-            Text = "MediaResume 断点续播",
+            Text = "ResumePoint 断点续播",
             Visible = true,
         };
         _tray.DoubleClick += (_, _) => ShowMain();
@@ -83,7 +83,7 @@ public sealed class TrayHost : IDisposable
         UpdateStatus();
 
         _loop = Task.Run(RecordLoopAsync);
-        AppLog.Info($"MediaResume 启动，数据库 {settings.DatabasePath}");
+        AppLog.Info($"ResumePoint 启动，数据库 {settings.DatabasePath}");
     }
 
     // ------------------------------------------------------------ 记录端循环
@@ -178,7 +178,7 @@ public sealed class TrayHost : IDisposable
         _statusItem.Text = text;
         _statusItem.ForeColor = color;
         var plain = text.Replace("●", "").Trim();
-        _tray.Text = Truncate($"MediaResume — {plain}", 63);
+        _tray.Text = Truncate($"ResumePoint — {plain}", 63);
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
@@ -233,7 +233,7 @@ public sealed class TrayHost : IDisposable
             {
                 _dispatch.BeginInvoke(new Action(() =>
                 {
-                    _tray.BalloonTipTitle = "MediaResume";
+                    _tray.BalloonTipTitle = "ResumePoint";
                     _tray.BalloonTipText = outcome.Message!;
                     _tray.BalloonTipIcon = outcome.Seeked ? ToolTipIcon.Info : ToolTipIcon.Warning;
                     _tray.ShowBalloonTip(4000);
@@ -303,7 +303,7 @@ public sealed class TrayHost : IDisposable
             _tray.Dispose();
             _menu.Dispose();
             _dispatch.Dispose();
-            AppLog.Info("MediaResume 退出");
+            AppLog.Info("ResumePoint 退出");
         }
         catch { }
     }

@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 public sealed class MediaRecord
 {

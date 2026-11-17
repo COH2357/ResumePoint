@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 文件指纹：size + 首 64KB + 尾 64KB 的 SHA-256。

@@ -1,8 +1,8 @@
 using System.Text;
-using MediaResume.Core;
-using MediaResume.UI;
+using ResumePoint.Core;
+using ResumePoint.UI;
 
-namespace MediaResume;
+namespace ResumePoint;
 
 internal static class Program
 {
@@ -24,7 +24,7 @@ internal static class Program
             // 命令行入口：打开并续播（给脚本 / 右键菜单 / 自动化用）
             if (openIndex + 1 >= args.Length)
             {
-                Console.Error.WriteLine("用法: MediaResume.exe --open <文件路径> | --open-start <文件路径>");
+                Console.Error.WriteLine("用法: ResumePoint.exe --open <文件路径> | --open-start <文件路径>");
                 return 2;
             }
             var target = args[openIndex + 1];
@@ -36,7 +36,7 @@ internal static class Program
         }
 
         // 单实例：托盘常驻程序必须保证只有一个，否则会重复写库 / 重复 seek
-        using var mutex = new Mutex(initiallyOwned: true, @"MediaResume.SingleInstance", out var createdNew);
+        using var mutex = new Mutex(initiallyOwned: true, @"ResumePoint.SingleInstance", out var createdNew);
         if (!createdNew)
         {
             // 已有实例在跑 -> 激活它（把主窗口叫出来）后退出
@@ -52,6 +52,7 @@ internal static class Program
         try
         {
             var settings = Settings.Load();
+            Settings.MigrateLegacyData(settings);   // 从改名前的数据目录迁移断点库
             settings.Save();
             Directory.CreateDirectory(settings.DataDirectory);
 
@@ -73,8 +74,8 @@ internal static class Program
         {
             AppLog.Error("启动失败", ex);
             MessageBox.Show(
-                $"MediaResume 启动失败：\n\n{ex.Message}\n\n日志：{AppLog.LogPath}",
-                "MediaResume", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                $"ResumePoint 启动失败：\n\n{ex.Message}\n\n日志：{AppLog.LogPath}",
+                "ResumePoint", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }
@@ -149,7 +150,7 @@ internal static class Program
     {
         var settings = Settings.Load();
         var sb = new StringBuilder();
-        sb.AppendLine("=== MediaResume 断点记录 ===");
+        sb.AppendLine("=== ResumePoint 断点记录 ===");
 
         using var db = new ResumeDb(settings.DatabasePath);
         db.Open();
@@ -206,7 +207,7 @@ internal static class Program
             try { Console.WriteLine(line); } catch { }
         }
 
-        W("=== MediaResume 诊断 ===");
+        W("=== ResumePoint 诊断 ===");
         W($"OS               : {Environment.OSVersion}");
         W($"设置文件         : {Settings.SettingsPath}");
         W($"数据目录         : {settings.DataDirectory}");

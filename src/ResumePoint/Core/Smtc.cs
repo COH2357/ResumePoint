@@ -1,7 +1,7 @@
 using System.Windows.Forms;
 using Windows.Media.Control;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 public sealed class SmtcSessionInfo
 {

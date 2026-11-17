@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
-namespace MediaResume.Core;
+namespace ResumePoint.Core;
 
 /// <summary>
 /// 文件关联注册。
@@ -15,8 +15,8 @@ namespace MediaResume.Core;
 /// </summary>
 public static class FileAssociation
 {
-    private const string ProgId = "MediaResume.Video";
-    private const string AppExe = "MediaResume.exe";
+    private const string ProgId = "ResumePoint.Video";
+    private const string AppExe = "ResumePoint.exe";
 
     private static readonly string[] Extensions =
     {
@@ -46,12 +46,12 @@ public static class FileAssociation
 
             var cmd = $"\"{exe}\" --open \"%1\"";
 
-            Write($@"Software\Classes\{ProgId}", "", "MediaResume 断点续播打开");
+            Write($@"Software\Classes\{ProgId}", "", "ResumePoint 断点续播打开");
             Write($@"Software\Classes\{ProgId}\DefaultIcon", "", $"{exe},0");
             Write($@"Software\Classes\{ProgId}\shell\open\command", "", cmd);
             Write($@"Software\Classes\{ProgId}\SupportedTypes", null, null, Extensions);
 
-            Write($@"Software\Classes\Applications\{AppExe}", "", "MediaResume 断点续播");
+            Write($@"Software\Classes\Applications\{AppExe}", "", "ResumePoint 断点续播");
             Write($@"Software\Classes\Applications\{AppExe}\shell\open\command", "", cmd);
             Write($@"Software\Classes\Applications\{AppExe}\SupportedTypes", null, null, Extensions);
 
